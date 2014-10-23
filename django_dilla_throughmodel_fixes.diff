@@ -1,0 +1,58 @@
+diff --git a/MANIFEST.in b/MANIFEST.in
+index e3872ba..1b9e479 100644
+--- a/MANIFEST.in
++++ b/MANIFEST.in
+@@ -1,6 +1,7 @@
+ include README
+ include LICENSE
+ include MANIFEST.in
++include distribute_setup.py
+ include setup.py
+ recursive-include dilla *.py
+ include requirements.txt
+diff --git a/dilla/__init__.py b/dilla/__init__.py
+index 8416343..7ce02aa 100644
+--- a/dilla/__init__.py
++++ b/dilla/__init__.py
+@@ -232,10 +232,14 @@ class Dilla(object):
+ 
+         if record.is_app():
+             for model in self.appmodels.get(str(record)):
+-                record.model = model
+-                record.create_object()
+-                record.field = None
+-                self.spam(record)
++                try:
++                    record.model = model
++                    record.create_object()
++                    record.field = None
++                    self.spam(record)
++                except Exception as e:
++                    log.debug('Saving model %s failed, skipping it for this cycle.' % model)
++                    log.debug('%s' % e)
+ 
+         elif record.is_model():
+             for field in [field for field \
+@@ -252,6 +256,9 @@ class Dilla(object):
+             # ManyToMany fields if any
+ 
+             for field in record.model._meta.many_to_many:
++                if not field.rel.through or not field.rel.through._meta.auto_created:
++                    continue
++
+                 record.field = field
+                 record.many_to_many = True
+                 self.spam(record)
+diff --git a/setup.py b/setup.py
+index 2aa10c3..43a1af6 100644
+--- a/setup.py
++++ b/setup.py
+@@ -5,7 +5,7 @@ use_setuptools()
+ 
+ setup(
+     name='django-dilla',
+-    version='0.2beta',
++    version='0.2.2-custom',
+     author='Adam Rutkowski',
+     author_email='adam@mtod.org',
+     packages=find_packages(),
